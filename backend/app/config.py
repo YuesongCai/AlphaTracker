@@ -24,8 +24,9 @@ PORT = int(os.environ.get("MOSAIC_PORT", "8788"))
 BEIJING = ZoneInfo("Asia/Shanghai")
 
 # Polite identification for SEC EDGAR (required by their fair-access policy).
+# Set MOSAIC_EDGAR_UA to include your own contact, e.g. "MyTool me@example.com".
 EDGAR_USER_AGENT = os.environ.get(
-    "MOSAIC_EDGAR_UA", "Mosaic research tool cai.yuesong@outlook.com"
+    "MOSAIC_EDGAR_UA", "Mosaic research tool (github.com/YuesongCai/AlphaTracker)"
 )
 HTTP_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -40,7 +41,7 @@ DEFAULT_SETTINGS: dict[str, object] = {
     "llm.model": "claude-sonnet-4-6",
     "llm.cli_model": "sonnet",
     "feishu.enabled": True,
-    "feishu.open_id": "ou_8d0e4064f46c1d0de14c501c1f5db808",
+    "feishu.open_id": "",  # 在设置页填写接收人 open_id(lark-cli bot DM)
     "feishu.lark_cli": "/opt/homebrew/bin/lark-cli",
     "brief.morning": "08:00",
     "brief.evening": "19:30",

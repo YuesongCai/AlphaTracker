@@ -9,9 +9,15 @@
 ## 快速开始
 
 ```bash
+git clone https://github.com/YuesongCai/AlphaTracker.git
+cd AlphaTracker
 ./start.sh          # 首次自动装依赖+构建前端,之后直接起服务
 # → http://127.0.0.1:8788
 ```
+
+> 环境要求:macOS/Linux,Python 3.11+,Node 18+(仅首次构建前端需要)。
+> 飞书推送可选,依赖本机 `lark-cli`(设置页可改路径或关闭);SEC EDGAR 抓取建议
+> `export MOSAIC_EDGAR_UA="YourTool your@email.com"` 表明身份。
 
 首次启动自动完成:建库 → 灌入种子(10 标的、6 条播客同款叙事、4 个演示想法)→
 立即抓取一轮真实数据(新闻/报价/EDGAR/情绪)。之后每 20/30/60 分钟自动更新。
