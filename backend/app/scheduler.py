@@ -31,11 +31,14 @@ def _safe(job_name: str, fn) -> None:
 
 
 def _job_ingest_news() -> None:
-    from .services import brief, ingest, narratives
+    from .services import brief, discovery, ingest, narratives
 
     def run(db):
         ingest.ingest_news(db)
         narratives.refresh_all(db)
+        result = discovery.scan(db)
+        if result.get("candidates_new"):
+            log.info("discovery: %s", result)
         brief.instant_alerts(db)
 
     _safe("ingest_news", run)

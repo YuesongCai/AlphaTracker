@@ -11,7 +11,8 @@ from sqlalchemy.orm import Session
 
 from ..ai import triage
 from ..models import Narrative, OpsLog, Signal, SignalNarrative, Ticker
-from ..sources import edgar, google_news, stocktwits, yahoo
+from ..sources import (edgar, edgar_stream, google_news, hn, jin10, rss_pool,
+                       stocktwits, yahoo)
 
 log = logging.getLogger(__name__)
 
@@ -60,12 +61,14 @@ def _store_items(db: Session, items: list[dict], ticker_id: int | None,
         signal = Signal(
             ticker_id=ticker_id,
             source=item["source"],
+            lane=item.get("lane", "company"),
             publisher=item.get("publisher", ""),
             title=item["title"],
             url=item.get("url", ""),
             url_hash=url_hash,
             summary=item.get("summary", ""),
             published_at=item.get("published_at") or datetime.utcnow(),
+            entities=item.get("entities") or [],
         )
         db.add(signal)
         db.flush()
@@ -85,8 +88,31 @@ def _log(db: Session, job: str, status: str, detail: str) -> None:
     db.commit()
 
 
+def ingest_market(db: Session) -> dict:
+    """Market-WIDE lanes — the discovery engine's raw material.
+
+    Jin10 CN wire + official RSS pool + HN front page + EDGAR full-market
+    stream. Per-source fault tolerance: one dead wire never blocks the rest.
+    """
+    counts: dict[str, int] = {}
+    for name, fetch in (
+        ("jin10", lambda: jin10.fetch_flash(30, db)),
+        ("rss", lambda: rss_pool.fetch_all(per_feed=12)),
+        ("hn", lambda: hn.fetch(20)),
+        ("edgar_stream", lambda: edgar_stream.fetch_all(count=40)),
+    ):
+        try:
+            counts[name] = _store_items(db, fetch(), None)
+        except Exception as exc:  # noqa: BLE001 - single-source fault tolerance
+            log.warning("market lane %s failed: %s", name, exc)
+            counts[name] = -1
+    return counts
+
+
 def ingest_news(db: Session) -> dict:
-    """Google News per active ticker + per narrative keyword."""
+    """Market-wide lanes + per-coverage-ticker news + narrative keywords."""
+    market_counts = ingest_market(db)
+
     added = 0
     tickers = db.query(Ticker).filter_by(active=True).all()
     for ticker in tickers:
@@ -101,8 +127,10 @@ def ingest_news(db: Session) -> dict:
             added += _store_items(db, items, None, narrative_id=narrative.id)
 
     result = triage.run_triage(db)
-    _log(db, "ingest_news", "ok", f"新增 {added} 条,triage {result['triaged']} 条({result['engine']})")
-    return {"added": added, **result}
+    market_str = " ".join(f"{k}:{v}" for k, v in market_counts.items())
+    _log(db, "ingest_news", "ok",
+         f"市场[{market_str}] 个股+{added},triage {result['triaged']}({result['engine']})")
+    return {"added": added, "market": market_counts, **result}
 
 
 def refresh_quotes(db: Session) -> dict:

@@ -53,7 +53,25 @@ def init_db() -> None:
     with engine.connect() as conn:
         conn.execute(text("PRAGMA journal_mode=WAL"))
         conn.commit()
+    _migrate_columns()
     _ensure_default_settings()
+
+
+def _migrate_columns() -> None:
+    """Additive SQLite migrations for databases created by older versions."""
+    wanted = {
+        "signals": [
+            ("lane", "VARCHAR(12) DEFAULT 'company'"),
+            ("entities", "JSON DEFAULT '[]'"),
+        ],
+    }
+    with engine.connect() as conn:
+        for table, columns in wanted.items():
+            existing = {row[1] for row in conn.execute(text(f"PRAGMA table_info({table})"))}
+            for name, ddl in columns:
+                if name not in existing:
+                    conn.execute(text(f"ALTER TABLE {table} ADD COLUMN {name} {ddl}"))
+        conn.commit()
 
 
 # ---------------------------------------------------------------- settings --

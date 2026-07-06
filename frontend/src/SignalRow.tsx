@@ -1,10 +1,11 @@
 /** Signal list row — the shared visual unit across Today / Signals / detail pages. */
 import { Link } from "react-router-dom";
-import { EVENT_LABEL, Signal, timeAgo } from "./api";
+import { EVENT_LABEL, LANE_LABEL, Signal, timeAgo } from "./api";
 import { Mat, SentimentDot, VariantBadge } from "./ui";
 
 const SOURCE_LABEL: Record<string, string> = {
-  google_news: "新闻", edgar: "EDGAR", stocktwits: "社区", manual: "手动",
+  google_news: "新闻", rss: "RSS", jin10: "金十", hn: "HN",
+  edgar: "EDGAR", edgar_stream: "EDGAR", stocktwits: "社区", manual: "手动",
 };
 
 export default function SignalRow({ signal, showTicker = true, dense = false }: {
@@ -43,6 +44,9 @@ export default function SignalRow({ signal, showTicker = true, dense = false }: 
           <span>{timeAgo(signal.published_at)}</span>
           <span>·</span>
           <span>{SOURCE_LABEL[signal.source] || signal.source}{signal.publisher ? ` / ${signal.publisher}` : ""}</span>
+          {signal.lane && signal.lane !== "company" && (
+            <span className="border border-[#8b98a933] rounded px-1 py-px">{LANE_LABEL[signal.lane] || signal.lane}</span>
+          )}
           <span>·</span>
           <span className="border border-edge rounded px-1 py-px">{EVENT_LABEL[signal.event_type] || signal.event_type}</span>
           {signal.narratives.map((n) => (

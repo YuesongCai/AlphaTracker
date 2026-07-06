@@ -1,10 +1,11 @@
 # Mosaic — Variant Perception Engine
 
+> 引擎从全市场信息流里 cut through noise,把涌现的叙事喂给你;
 > AI 加速 Hunch → Hypothesis,人负责 Judgment。
 > 基于一位 Ex-Citadel / D.E. Shaw PM 的 investment process 方法论构建的个人研究操作系统。
 
 ![stack](https://img.shields.io/badge/stack-FastAPI%20·%20React%20·%20SQLite-1d2634)
-![data](https://img.shields.io/badge/data-GoogleNews%20·%20Yahoo%20·%20EDGAR%20·%20StockTwits-f0b429)
+![data](https://img.shields.io/badge/data-Jin10%20·%20WSJ%2FCNBC%2FMW%2FSA%2FNYT%2FFT%20·%20EDGAR%20·%20HN%20·%20Yahoo-f0b429)
 
 ## 快速开始
 
@@ -26,6 +27,7 @@ cd AlphaTracker
 
 | 模块 | 干什么 | 对应方法论 |
 |---|---|---|
+| **雷达** ★ | 发现引擎主页:48h 滚动聚类全市场信号 → 热度×跨源广度×新颖度评分 → AI 合成**涌现叙事候选**(为什么是现在 / key driver / 多空框架),一键 promote 进入追踪或忽略;趋势实体、金十财经日历、分通道信号流 | 不是你输入 ticker 让它盯,是它从噪音里切出 narrative 喂你 |
 | **今日** | 隔夜要闻(重要性排序+so-what)、叙事动量、driver 警报、财报日历 | 晨会前 5 分钟扫完该看的 |
 | **信号流** | 多源新闻/公告自动摄取 + AI 分诊(M1-M5 重要性/情绪/事件类型/非共识标记) | "It's a signal, not a thesis" |
 | **叙事** | 把"市场在辩论的问题"变成可监控对象:证据时间线 + 动量评分 | narrative cycle 决定久期资产重估 |
@@ -48,18 +50,25 @@ cd AlphaTracker
 
 - `backend/` FastAPI + SQLite + APScheduler;数据源插件式(`app/sources/`)
 - `frontend/` React 18 + Vite + TS + Tailwind v4,构建后由后端同端口托管
-- 测试:`cd backend && ../.venv/bin/python -m pytest tests/ -q`(22 个用例)
+- 测试:`cd backend && ../.venv/bin/python -m pytest tests/ -q`(29 个用例)
 - 数据全部本地(`data/mosaic.db`),研究观点不出机器
 
-## 数据源
+## 数据源(五通道)
 
-| 源 | 内容 | 说明 |
+**市场级通道**(发现引擎的原料,不依赖你输入 ticker):
+
+| 通道 | 源 | 说明 |
 |---|---|---|
-| Google News RSS | 个股+叙事关键词新闻 | 美股/港股/中英文皆可 |
-| Yahoo Finance | 报价、财报日期 | 港股用 `0700.HK` 格式 |
-| SEC EDGAR | 8-K/10-K/10-Q/13D 等公告 | 美股;自动映射 CIK |
-| StockTwits | 散户情绪(多头占比) | 美股 |
-| 手动录入 | 专家访谈、渠道调研等私有信息 | 信号流页右上角 |
+| 宏观 | **金十数据** flash + 财经日历(MCP 直连) | 中文宏观/市场最快 wire;设置页或 `data/secrets.json` 配 token,无 token 自动跳过 |
+| 宏观 | NYT Economy · FT · 美联储官方 | 官方 RSS 直连 |
+| 市场 | WSJ Markets/Business · CNBC Top/Markets · MarketWatch · Seeking Alpha 快讯 · NYT Business | 官方 RSS 直连,非搜索代理 |
+| 科技 | CNBC Tech · TechCrunch · The Verge · **Hacker News 头版**(≥80分) | 科技叙事最早的风向标 |
+| 公告 | **EDGAR getcurrent 全市场流**:所有新 8-K/SC 13D(举牌) | 全市场公司事件雷达,纯规则分诊控制 LLM 成本 |
+
+**个股通道**(覆盖池内标的):Google News 关键词 + Yahoo 报价/财报日 + EDGAR 按 CIK + StockTwits 情绪 + 手动录入(专家访谈/渠道调研)。
+
+> SEC 要求 UA 带联系方式:`export MOSAIC_EDGAR_UA="YourTool your@email.com"`
+> 或在 `data/secrets.json` 写 `{"edgar_ua": "...", "jin10_token": "..."}`(该文件不进 git)。
 
 ## 提醒
 

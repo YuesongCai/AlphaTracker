@@ -38,9 +38,15 @@ def _context_blocks(db: Session) -> tuple[str, str, str, set[int], set[int]]:
 
 
 def _apply_heuristic(signal: Signal, db: Session | None = None) -> None:
-    form = signal.title.split("]")[0].lstrip("[") if signal.source == "edgar" else None
+    form = (signal.title.split("]")[0].lstrip("[")
+            if signal.source in ("edgar", "edgar_stream") else None)
     result = heuristics.triage_one(signal.title, signal.source, form)
     _apply_result(signal, result, engine="heuristic")
+    if not signal.entities:
+        known = set()
+        if db is not None:
+            known = {row.symbol for row in db.query(Ticker.symbol).all()}
+        signal.entities = heuristics.extract_entities(signal.title, known)
     if db is not None:
         _keyword_link_narratives(db, signal)
 
@@ -82,6 +88,11 @@ def _apply_result(signal: Signal, result: dict, engine: str) -> None:
     signal.event_type = str(result.get("event_type", "other"))[:20]
     signal.so_what = str(result.get("so_what", ""))[:300]
     signal.variant = bool(result.get("variant", False))
+    raw_entities = result.get("entities")
+    if isinstance(raw_entities, list):
+        cleaned = [str(e).strip()[:40] for e in raw_entities if str(e).strip()]
+        if cleaned:
+            signal.entities = cleaned[:6]
     signal.triaged = True
     signal.triage_engine = engine
 
@@ -123,16 +134,25 @@ def run_triage(db: Session, limit: int = 120) -> dict:
     the heuristic path is cheap and always clears the whole backlog."""
     backend, _ = provider.resolve_backend(db)
 
-    query = db.query(Signal).filter_by(triaged=False).order_by(Signal.published_at.desc())
+    # The market-wide EDGAR stream is high-volume/low-signal-density:
+    # always heuristic-only so LLM budget goes to news lanes.
+    stream = db.query(Signal).filter_by(triaged=False, source="edgar_stream").all()
+    for signal in stream:
+        _apply_heuristic(signal, db)
+    if stream:
+        db.commit()
+
+    query = (db.query(Signal).filter_by(triaged=False)
+             .order_by(Signal.published_at.desc()))
     pending = query.all() if backend == "off" else query.limit(limit).all()
     if not pending:
-        return {"triaged": 0, "engine": "none"}
+        return {"triaged": len(stream), "engine": "heuristic" if stream else "none"}
 
     if backend == "off":
         for signal in pending:
             _apply_heuristic(signal, db)
         db.commit()
-        return {"triaged": len(pending), "engine": "heuristic"}
+        return {"triaged": len(pending) + len(stream), "engine": "heuristic"}
 
     coverage, narr_block, driver_block, valid_narr, valid_drv = _context_blocks(db)
     done = 0
@@ -140,8 +160,9 @@ def run_triage(db: Session, limit: int = 120) -> dict:
     for i in range(0, len(pending), BATCH_SIZE):
         batch = pending[i : i + BATCH_SIZE]
         items = "\n".join(
-            f"- id={s.id} [{s.ticker.symbol if s.ticker else 'MACRO'}|{s.source}"
+            f"- id={s.id} [{s.lane}|{s.ticker.symbol if s.ticker else '全市场'}"
             f"|{s.publisher}] {s.title}"
+            + (f" || {s.summary[:150]}" if s.source == "jin10" and s.summary else "")
             for s in batch
         )
         prompt = prompts.TRIAGE_PROMPT.format(

@@ -1,18 +1,21 @@
 /** Signals — the full filterable feed. */
 import { useCallback, useEffect, useState } from "react";
-import { api, EVENT_LABEL, Signal, Ticker } from "../api";
+import { useSearchParams } from "react-router-dom";
+import { api, EVENT_LABEL, LANE_LABEL, Signal, Ticker } from "../api";
 import SignalRow from "../SignalRow";
 import { Empty, Field, Modal, Spinner } from "../ui";
 
 export default function Signals() {
+  const [searchParams] = useSearchParams();
   const [items, setItems] = useState<Signal[] | null>(null);
   const [total, setTotal] = useState(0);
   const [tickers, setTickers] = useState<Ticker[]>([]);
   const [tickerId, setTickerId] = useState("");
   const [eventType, setEventType] = useState("");
+  const [lane, setLane] = useState(searchParams.get("lane") || "");
   const [minMat, setMinMat] = useState("1");
   const [variantOnly, setVariantOnly] = useState(false);
-  const [q, setQ] = useState("");
+  const [q, setQ] = useState(searchParams.get("q") || "");
   const [days, setDays] = useState("14");
   const [offset, setOffset] = useState(0);
   const [showAdd, setShowAdd] = useState(false);
@@ -27,14 +30,15 @@ export default function Signals() {
     });
     if (tickerId) params.set("ticker_id", tickerId);
     if (eventType) params.set("event_type", eventType);
+    if (lane) params.set("lane", lane);
     if (variantOnly) params.set("variant_only", "true");
     if (q.trim()) params.set("q", q.trim());
     api.get<{ total: number; items: Signal[] }>(`/api/signals?${params}`)
       .then((r) => { setItems(r.items); setTotal(r.total); });
-  }, [tickerId, eventType, minMat, variantOnly, q, days, offset]);
+  }, [tickerId, eventType, lane, minMat, variantOnly, q, days, offset]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setOffset(0); }, [tickerId, eventType, minMat, variantOnly, q, days]);
+  useEffect(() => { setOffset(0); }, [tickerId, eventType, lane, minMat, variantOnly, q, days]);
 
   const addManual = async () => {
     if (!manual.title.trim()) return;
@@ -60,6 +64,10 @@ export default function Signals() {
         <select className="select !w-[130px]" value={tickerId} onChange={(e) => setTickerId(e.target.value)}>
           <option value="">全部标的</option>
           {tickers.map((t) => <option key={t.id} value={t.id}>{t.symbol}</option>)}
+        </select>
+        <select className="select !w-[100px]" value={lane} onChange={(e) => setLane(e.target.value)}>
+          <option value="">全部通道</option>
+          {Object.entries(LANE_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
         </select>
         <select className="select !w-[110px]" value={eventType} onChange={(e) => setEventType(e.target.value)}>
           <option value="">全部事件</option>

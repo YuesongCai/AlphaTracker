@@ -53,17 +53,36 @@ Ticker(覆盖池) ──┬── Signal(新闻/公告/情绪,AI triage 后带 m
 **Focus-5**(播客原框架,Sniff Test 的骨架):organic revenue growth /
 margin trajectory / capital intensity / capital deployment / terminal value visibility。
 
-## 4. 数据源(全部免费、已验证可用)
+## 4. 数据源(v1.1 重构:官方 wire 五通道,MacroRadar 模式)
 
-| 源 | 内容 | 频率 |
+**设计转向**:v1.0 依赖 Google News 搜索代理 —— 不 solid。v1.1 改为直连官方 wire,
+市场级通道不依赖任何 ticker 输入,是发现引擎的原料:
+
+| 通道 | 源 | 频率 |
 |---|---|---|
-| Google News RSS | 每 ticker + 每 narrative 关键词新闻,美股/港股/中概通吃 | 每 20 分钟 |
-| Yahoo Finance | 价格、涨跌、财报日期(美股+港股 0700.HK 格式) | 每 30 分钟 |
-| SEC EDGAR | 8-K/10-K/10-Q/Form 4 等公告(美股) | 每 60 分钟 |
-| StockTwits | 散户情绪流(watchlist 数、message 热度) | 每 60 分钟 |
-| 手动 | 粘贴任意 URL/文本进信号流(专家访谈纪要等) | 随时 |
+| 宏观 | **金十数据** flash + 财经日历(MCP 直连,绕代理防 SSE 截断) | 每 20 分钟 |
+| 宏观 | NYT Economy、FT、美联储官方 RSS | 每 20 分钟 |
+| 市场 | WSJ Markets/Business、CNBC Top/Markets、MarketWatch、Seeking Alpha 快讯、NYT Business(官方 RSS) | 每 20 分钟 |
+| 科技 | CNBC Tech、TechCrunch、The Verge、HN 头版≥80分 | 每 20 分钟 |
+| 公告 | **EDGAR getcurrent 全市场流**(所有新 8-K / SC 13D 举牌) | 每 20 分钟 |
+| 个股 | Google News 关键词、Yahoo 报价/财报日、EDGAR 按 CIK、StockTwits 情绪、手动录入 | 20-60 分钟 |
 
-扩展位:财报电话会 transcript、卖方报告目录、另类数据,接口已留(source 插件式)。
+单源容错(一条 wire 挂了不影响其余)。凭证(金十 token、EDGAR 联系方式)存
+`data/secrets.json` / 设置页 / 环境变量,不进 git。
+OpenBB 评估结论:**借地图不借包** —— 其新闻 provider 基本 key-gated(benzinga/biztoc/fmp),
+keyless 端点(yfinance/SEC/nasdaq)直连即可,不值得背依赖树。
+
+## 4.5 发现引擎(v1.1 核心:从 monitor 转向 discover)
+
+**产品哲学修正**:不是"你输入 ticker 我来盯",而是"引擎从纷杂信息流里 cut through noise,
+把 narrative 和值得深挖的 key driver 喂给你"。
+
+管线:全市场信号 → triage 抽取规范化实体(ticker + 主题标签)→ 48h 滚动聚类 →
+评分 = 热度(重要性加权+时间衰减)× 跨源广度(≥3 独立信源加成)× 跨通道加成 × 新颖度(vs 30 天基线)→
+高分新聚类由 AI 合成**叙事候选**(标题/核心辩论/为什么是现在/key driver 问题/多空框架/相关标的)→
+用户 promote(自动建叙事+标的入池+证据挂载,进入持续追踪)或 dismiss(压制 7 天)。
+AI 判为噪音的候选折叠展示,可人工翻案 —— 引擎克制,判断永远在人。
+雷达页为默认落地页;新候选进飞书晨晚报。
 
 ## 5. AI 层(三级降级,永不宕机)
 

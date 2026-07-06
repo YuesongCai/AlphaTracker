@@ -80,14 +80,31 @@ def _collect(db: Session, hours: int) -> dict:
                 Idea.updated_at < datetime.utcnow() - timedelta(days=7))
         .all()
     )
+
+    from ..models import NarrativeCandidate
+    candidates = (
+        db.query(NarrativeCandidate)
+        .filter(NarrativeCandidate.status == "pending",
+                NarrativeCandidate.created_at >= since)
+        .order_by(NarrativeCandidate.score.desc())
+        .limit(3).all()
+    )
     return {"groups": groups, "driver_alerts": driver_alerts, "earnings": earnings,
-            "movers": movers, "stale_ideas": stale}
+            "movers": movers, "stale_ideas": stale, "candidates": candidates}
 
 
 def _render_template(data: dict, kind_label: str) -> str:
     """Deterministic fallback rendering (also the LLM's raw material)."""
     now = _beijing_now()
     lines = [f"**Mosaic {kind_label}** · {now:%m-%d %H:%M} 北京时间", ""]
+
+    if data.get("candidates"):
+        lines.append("◈ **雷达新发现**(待审叙事候选)")
+        for cand in data["candidates"]:
+            why = f" —— {cand.why_now}" if cand.why_now else ""
+            lines.append(f"  · **{cand.title or cand.cluster_key}**"
+                         f"(热度{cand.score:.0f},{cand.breadth_pub}源){why}")
+        lines.append("")
 
     if data["movers"]:
         movers = " · ".join(
@@ -146,7 +163,11 @@ def _llm_polish(db: Session, data: dict, kind_label: str, template_md: str) -> s
                     + (f" | url: {s.url}" if s.url else "")
                 )
         payload = (
-            "信号:\n" + "\n".join(compact[:25])
+            "雷达新发现(叙事候选): " + "; ".join(
+                f"{c.title or c.cluster_key}(热度{c.score:.0f})"
+                for c in data.get("candidates") or []
+            )
+            + "\n\n信号:\n" + "\n".join(compact[:25])
             + "\n\n叙事动量: " + "; ".join(
                 f"{n.title}(分数{n.momentum_score},比率{n.momentum_ratio})" for n in data["movers"]
             )

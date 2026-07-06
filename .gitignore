@@ -7,3 +7,6 @@ data/*.db
 data/*.db-journal
 .env
 .DS_Store
+data/secrets.json
+data/*.db-*
+data/server.log

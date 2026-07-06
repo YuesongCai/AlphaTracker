@@ -17,6 +17,7 @@ from ..db import all_settings, get_db, get_setting, set_setting
 from ..models import (Brief, Driver, Evidence, Idea, JournalEntry, Narrative,
                       NarrativeTicker, OpsLog, Signal, SignalNarrative, Ticker)
 from ..services import brief as brief_service
+from ..services import discovery
 from ..services import feishu, ideas as idea_service, ingest, narratives as narrative_service
 from . import serializers as ser
 
@@ -182,6 +183,7 @@ def list_signals(
     ticker_id: int | None = None,
     narrative_id: int | None = None,
     event_type: str | None = None,
+    lane: str | None = None,
     min_materiality: int = 1,
     variant_only: bool = False,
     q: str | None = None,
@@ -192,6 +194,8 @@ def list_signals(
     query = db.query(Signal).filter(
         Signal.published_at >= datetime.utcnow() - timedelta(days=min(days, 90))
     )
+    if lane:
+        query = query.filter(Signal.lane == lane)
     if ticker_id:
         query = query.filter(Signal.ticker_id == ticker_id)
     if narrative_id:
@@ -595,6 +599,74 @@ def add_evidence(driver_id: int, body: EvidenceIn, db: Session = Depends(get_db)
                         stance=stance, note=body.note))
     db.commit()
     return ser.driver_out(driver)
+
+
+# ------------------------------------------------------------------- discover
+
+@router.get("/discover")
+def discover(db: Session = Depends(get_db)):
+    from ..models import NarrativeCandidate
+    from ..sources import jin10
+
+    candidates = (
+        db.query(NarrativeCandidate)
+        .filter(NarrativeCandidate.status.in_(["pending", "ai_skip"]))
+        .order_by(NarrativeCandidate.score.desc())
+        .limit(30).all()
+    )
+    out = []
+    for cand in candidates:
+        evidence = (
+            db.query(Signal).filter(Signal.id.in_(cand.evidence_ids or []))
+            .order_by(Signal.materiality.desc(), Signal.published_at.desc())
+            .limit(6).all()
+        ) if cand.evidence_ids else []
+        out.append(ser.candidate_out(cand, evidence))
+
+    try:
+        calendar = jin10.fetch_calendar(min_star=2, db=db)
+    except Exception:  # noqa: BLE001 - calendar is garnish, never a blocker
+        calendar = []
+
+    lanes = dict(
+        db.query(Signal.lane, func.count(Signal.id))
+        .filter(Signal.published_at >= datetime.utcnow() - timedelta(hours=24))
+        .group_by(Signal.lane).all()
+    )
+    return {
+        "candidates": out,
+        "trending": discovery.trending_entities(db),
+        "calendar": calendar,
+        "lanes_24h": lanes,
+    }
+
+
+@router.post("/discover/scan")
+def discover_scan(db: Session = Depends(get_db)):
+    result = discovery.scan(db)
+    return {"ok": True, **result}
+
+
+@router.post("/discover/candidates/{cand_id}/promote")
+def promote_candidate(cand_id: int, db: Session = Depends(get_db)):
+    from ..models import NarrativeCandidate
+
+    cand = db.get(NarrativeCandidate, cand_id)
+    if not cand:
+        raise HTTPException(404)
+    narrative = discovery.promote(db, cand)
+    return {"ok": True, "narrative": ser.narrative_out(narrative)}
+
+
+@router.post("/discover/candidates/{cand_id}/dismiss")
+def dismiss_candidate(cand_id: int, db: Session = Depends(get_db)):
+    from ..models import NarrativeCandidate
+
+    cand = db.get(NarrativeCandidate, cand_id)
+    if not cand:
+        raise HTTPException(404)
+    discovery.dismiss(db, cand)
+    return {"ok": True}
 
 
 # --------------------------------------------------------------------- briefs

@@ -67,7 +67,10 @@ class Signal(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     ticker_id: Mapped[Optional[int]] = mapped_column(ForeignKey("tickers.id"), nullable=True, index=True)
-    source: Mapped[str] = mapped_column(String(20), index=True)  # google_news|edgar|stocktwits|manual
+    source: Mapped[str] = mapped_column(String(20), index=True)
+    # google_news|rss|jin10|hn|edgar|edgar_stream|stocktwits|manual
+    lane: Mapped[str] = mapped_column(String(12), default="company", index=True)
+    # company | markets | macro | tech | filings
     publisher: Mapped[str] = mapped_column(String(120), default="")
     title: Mapped[str] = mapped_column(Text)
     url: Mapped[str] = mapped_column(Text, default="")
@@ -85,6 +88,8 @@ class Signal(Base):
     event_type: Mapped[str] = mapped_column(String(20), default="other", index=True)
     so_what: Mapped[str] = mapped_column(Text, default="")
     variant: Mapped[bool] = mapped_column(Boolean, default=False)
+    entities: Mapped[Any] = mapped_column(JSON, default=list)
+    # canonical tags for clustering: tickers ("NVDA") + themes ("AI capex")
 
     ticker: Mapped[Optional[Ticker]] = relationship(back_populates="signals")
     narrative_links: Mapped[list["SignalNarrative"]] = relationship(
@@ -147,6 +152,39 @@ class SignalNarrative(Base):
 
     signal: Mapped[Signal] = relationship(back_populates="narrative_links")
     narrative: Mapped[Narrative] = relationship(back_populates="signal_links")
+
+
+class NarrativeCandidate(Base):
+    """An emerging-narrative candidate surfaced by the discovery engine.
+
+    The user promotes it into a tracked Narrative or dismisses it —
+    the engine feeds narratives to the analyst, not the other way round.
+    """
+
+    __tablename__ = "narrative_candidates"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    cluster_key: Mapped[str] = mapped_column(String(80), index=True)  # canonical entity
+    title: Mapped[str] = mapped_column(String(200), default="")
+    question: Mapped[str] = mapped_column(Text, default="")
+    why_now: Mapped[str] = mapped_column(Text, default="")
+    driver_question: Mapped[str] = mapped_column(Text, default="")
+    stance_bull: Mapped[str] = mapped_column(Text, default="")
+    stance_bear: Mapped[str] = mapped_column(Text, default="")
+    ticker_symbols: Mapped[Any] = mapped_column(JSON, default=list)
+    keywords: Mapped[Any] = mapped_column(JSON, default=list)
+    evidence_ids: Mapped[Any] = mapped_column(JSON, default=list)  # signal ids
+    score: Mapped[float] = mapped_column(Float, default=0.0)
+    heat: Mapped[float] = mapped_column(Float, default=0.0)
+    breadth_pub: Mapped[int] = mapped_column(Integer, default=0)
+    breadth_lane: Mapped[int] = mapped_column(Integer, default=0)
+    novelty: Mapped[bool] = mapped_column(Boolean, default=True)
+    status: Mapped[str] = mapped_column(String(12), default="pending", index=True)
+    # pending | promoted | dismissed | ai_skip
+    engine: Mapped[str] = mapped_column(String(20), default="heuristic")
+    ai_rationale: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow, onupdate=utcnow)
 
 
 class Idea(Base):

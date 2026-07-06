@@ -29,6 +29,7 @@ def signal_out(s: Signal) -> dict:
     return {
         "id": s.id,
         "ticker": {"id": s.ticker.id, "symbol": s.ticker.symbol} if s.ticker else None,
+        "lane": s.lane, "entities": s.entities or [],
         "source": s.source, "publisher": s.publisher, "title": s.title,
         "url": s.url, "summary": s.summary,
         "published_at": iso(s.published_at),
@@ -107,6 +108,21 @@ def idea_out(i: Idea, full: bool = False) -> dict:
             "journal": [journal_out(j) for j in sorted(i.journal, key=lambda x: x.created_at, reverse=True)],
         })
     return out
+
+
+def candidate_out(c, evidence_signals: list[Signal] | None = None) -> dict:
+    return {
+        "id": c.id, "cluster_key": c.cluster_key, "title": c.title,
+        "question": c.question, "why_now": c.why_now,
+        "driver_question": c.driver_question,
+        "stance_bull": c.stance_bull, "stance_bear": c.stance_bear,
+        "ticker_symbols": c.ticker_symbols or [], "keywords": c.keywords or [],
+        "score": c.score, "heat": c.heat, "breadth_pub": c.breadth_pub,
+        "breadth_lane": c.breadth_lane, "novelty": c.novelty,
+        "status": c.status, "engine": c.engine, "ai_rationale": c.ai_rationale,
+        "created_at": iso(c.created_at), "updated_at": iso(c.updated_at),
+        "evidence": [signal_out(s) for s in evidence_signals or []],
+    }
 
 
 def brief_out(b: Brief) -> dict:

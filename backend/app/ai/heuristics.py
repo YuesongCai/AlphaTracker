@@ -73,3 +73,56 @@ def triage_one(title: str, source: str = "google_news", form: str | None = None)
         "so_what": "",
         "variant": False,
     }
+
+
+# ------------------------------------------------------- entity extraction --
+
+# Common-name -> ticker for names that rarely appear as raw tickers in prose.
+ALIAS_MAP = {
+    "nvidia": "NVDA", "apple": "AAPL", "microsoft": "MSFT", "google": "GOOGL",
+    "alphabet": "GOOGL", "amazon": "AMZN", "meta": "META", "tesla": "TSLA",
+    "openai": "OpenAI", "anthropic": "Anthropic", "broadcom": "AVGO",
+    "netflix": "NFLX", "oracle": "ORCL", "amd": "AMD", "intel": "INTC",
+    "tsmc": "TSM", "台积电": "TSM", "uber": "UBER", "palantir": "PLTR",
+    "salesforce": "CRM", "eli lilly": "LLY", "novo nordisk": "NVO",
+    "draftkings": "DKNG", "micron": "MU", "boeing": "BA", "jpmorgan": "JPM",
+    "goldman": "GS", "berkshire": "BRK.B", "英伟达": "NVDA", "苹果": "AAPL",
+    "微软": "MSFT", "特斯拉": "TSLA", "腾讯": "0700.HK", "阿里巴巴": "9988.HK",
+    "阿里": "9988.HK", "小米": "1810.HK", "美团": "3690.HK", "京东": "9618.HK",
+    "百度": "9888.HK", "比亚迪": "1211.HK", "中芯国际": "0981.HK",
+    "美联储": "美联储", "fed": "美联储", "federal reserve": "美联储",
+    "opec": "OPEC", "bitcoin": "BTC", "比特币": "BTC", "黄金": "黄金",
+    "原油": "原油", "关税": "关税", "tariff": "关税", "tariffs": "关税",
+}
+
+_DOLLAR_TICKER = re.compile(r"\$([A-Z]{1,5})\b")
+
+
+def extract_entities(title: str, known_symbols: set[str] | None = None) -> list[str]:
+    """No-LLM entity tags: $TICKER mentions, known coverage symbols, alias map."""
+    text = title or ""
+    lower = text.lower()
+    found: list[str] = []
+
+    for match in _DOLLAR_TICKER.findall(text):
+        if match not in found:
+            found.append(match)
+
+    for symbol in known_symbols or set():
+        base = symbol.split(".")[0]
+        # HK symbols match by number ("0700"); US by word-boundary symbol
+        pattern = rf"\b{re.escape(base)}\b" if not base.isdigit() else re.escape(base)
+        if re.search(pattern, text) and symbol not in found:
+            found.append(symbol)
+
+    for alias, canonical in ALIAS_MAP.items():
+        if canonical in found:
+            continue
+        if alias.isascii():
+            # word boundary so "uber" doesn't fire inside "Uberto"
+            if re.search(rf"\b{re.escape(alias)}\b", lower):
+                found.append(canonical)
+        elif alias in text:  # CJK has no word boundaries
+            found.append(canonical)
+
+    return found[:6]

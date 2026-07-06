@@ -6,7 +6,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 APP_NAME = "Mosaic"
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 
 # Repo layout: <root>/backend/app/config.py -> root is two levels up from app/
 ROOT_DIR = Path(__file__).resolve().parents[2]
@@ -23,11 +23,24 @@ PORT = int(os.environ.get("MOSAIC_PORT", "8788"))
 
 BEIJING = ZoneInfo("Asia/Shanghai")
 
-# Polite identification for SEC EDGAR (required by their fair-access policy).
-# Set MOSAIC_EDGAR_UA to include your own contact, e.g. "MyTool me@example.com".
-EDGAR_USER_AGENT = os.environ.get(
-    "MOSAIC_EDGAR_UA", "Mosaic research tool (github.com/YuesongCai/AlphaTracker)"
-)
+# Polite identification for SEC EDGAR (fair-access policy). SEC's getcurrent
+# endpoint additionally REQUIRES an email-shaped contact in the UA string.
+# Priority: env MOSAIC_EDGAR_UA > data/secrets.json "edgar_ua" > generic default.
+def _edgar_ua() -> str:
+    ua = os.environ.get("MOSAIC_EDGAR_UA", "").strip()
+    if ua:
+        return ua
+    try:
+        import json
+        secrets = json.loads((DATA_DIR / "secrets.json").read_text())
+        if secrets.get("edgar_ua"):
+            return str(secrets["edgar_ua"])
+    except (OSError, ValueError):
+        pass
+    return "Mosaic research tool (set-your-contact@example.org)"
+
+
+EDGAR_USER_AGENT = _edgar_ua()
 HTTP_USER_AGENT = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/131.0 Safari/537.36"
@@ -43,6 +56,7 @@ DEFAULT_SETTINGS: dict[str, object] = {
     "feishu.enabled": True,
     "feishu.open_id": "",  # 在设置页填写接收人 open_id(lark-cli bot DM)
     "feishu.lark_cli": "/opt/homebrew/bin/lark-cli",
+    "sources.jin10_token": "",  # 金十数据 MCP token(mcp.jin10.com);也可用 env/data/secrets.json
     "brief.morning": "08:00",
     "brief.evening": "19:30",
     "ingest.news_minutes": 20,

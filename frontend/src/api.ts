@@ -53,6 +53,7 @@ export interface Ticker extends TickerLite {
 export interface Signal {
   id: number;
   ticker: { id: number; symbol: string } | null;
+  lane: string; entities: string[];
   source: string; publisher: string; title: string; url: string; summary: string;
   published_at: string;
   triaged: boolean; triage_engine: string;
@@ -114,6 +115,34 @@ export interface Brief {
   created_at: string; sent: boolean; send_error: string;
 }
 
+export interface Candidate {
+  id: number; cluster_key: string; title: string; question: string;
+  why_now: string; driver_question: string;
+  stance_bull: string; stance_bear: string;
+  ticker_symbols: string[]; keywords: string[];
+  score: number; heat: number; breadth_pub: number; breadth_lane: number;
+  novelty: boolean; status: string; engine: string; ai_rationale: string;
+  created_at: string; updated_at: string; evidence: Signal[];
+}
+
+export interface TrendingEntity {
+  entity: string; score: number; heat: number; breadth_pub: number;
+  breadth_lane: number; novelty: boolean; count: number; sample_title: string;
+}
+
+export interface CalendarItem {
+  pub_time: string; star: number; title: string;
+  consensus?: string | null; previous?: string | null; actual?: string | null;
+  affect?: string;
+}
+
+export interface DiscoverPayload {
+  candidates: Candidate[];
+  trending: TrendingEntity[];
+  calendar: CalendarItem[];
+  lanes_24h: Record<string, number>;
+}
+
 export interface Dashboard {
   top_signals: Signal[];
   movers: Narrative[];
@@ -167,4 +196,8 @@ export const STAGE_LABEL: Record<string, string> = {
 
 export const STATUS_LABEL: Record<string, string> = {
   forming: "酝酿中", accelerating: "升温", cooling: "降温", resolved: "已了结",
+};
+
+export const LANE_LABEL: Record<string, string> = {
+  company: "个股", markets: "市场", macro: "宏观", tech: "科技", filings: "公告",
 };

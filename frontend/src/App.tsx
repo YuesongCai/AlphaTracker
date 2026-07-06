@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { NavLink, Route, Routes, useLocation } from "react-router-dom";
 import { api } from "./api";
+import Radar from "./pages/Radar";
 import Today from "./pages/Today";
 import Signals from "./pages/Signals";
 import Narratives from "./pages/Narratives";
@@ -13,7 +14,8 @@ import Briefs from "./pages/Briefs";
 import Settings from "./pages/Settings";
 
 const NAV = [
-  { to: "/", label: "今日", icon: "◉" },
+  { to: "/", label: "雷达", icon: "◈" },
+  { to: "/today", label: "今日", icon: "◉" },
   { to: "/signals", label: "信号流", icon: "≋" },
   { to: "/narratives", label: "叙事", icon: "◫" },
   { to: "/pipeline", label: "管线", icon: "⇶" },
@@ -87,7 +89,8 @@ export default function App() {
 
       <main className="flex-1 min-w-0 px-6 py-5 max-w-[1240px]">
         <Routes>
-          <Route path="/" element={<Today />} />
+          <Route path="/" element={<Radar />} />
+          <Route path="/today" element={<Today />} />
           <Route path="/signals" element={<Signals />} />
           <Route path="/narratives" element={<Narratives />} />
           <Route path="/narratives/:id" element={<NarrativeDetail />} />
