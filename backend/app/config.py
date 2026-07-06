@@ -57,6 +57,8 @@ DEFAULT_SETTINGS: dict[str, object] = {
     "feishu.open_id": "",  # 在设置页填写接收人 open_id(lark-cli bot DM)
     "feishu.lark_cli": "/opt/homebrew/bin/lark-cli",
     "sources.jin10_token": "",  # 金十数据 MCP token(mcp.jin10.com);也可用 env/data/secrets.json
+    "server.access_token": "",  # 非本机访问的共享口令(首次启动自动生成);本机 127.0.0.1 免验
+
     "brief.morning": "08:00",
     "brief.evening": "19:30",
     "ingest.news_minutes": 20,

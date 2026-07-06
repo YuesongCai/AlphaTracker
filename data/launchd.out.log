@@ -3,3 +3,14 @@ INFO:     127.0.0.1:50753 - "POST /api/discover/scan HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51038 - "GET /api/discover HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51199 - "POST /api/ideas/sniff HTTP/1.1" 200 OK
 INFO:     127.0.0.1:51682 - "POST /api/briefs/generate HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54175 - "GET /healthz HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54177 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54567 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     127.0.0.1:54882 - "GET /api/settings HTTP/1.1" 200 OK
+INFO:     103.188.180.8:0 - "GET / HTTP/1.1" 401 Unauthorized
+INFO:     103.188.180.8:0 - "GET /api/dashboard HTTP/1.1" 401 Unauthorized
+INFO:     103.188.180.8:0 - "GET /?key=58CBj2bnUEQM HTTP/1.1" 302 Found
+INFO:     103.188.180.8:0 - "GET /?key=58CBj2bnUEQM HTTP/1.1" 302 Found
+INFO:     103.188.180.8:0 - "GET / HTTP/1.1" 200 OK
+INFO:     103.188.180.8:0 - "GET /api/dashboard HTTP/1.1" 200 OK
+INFO:     103.188.180.8:0 - "GET /?key=wrongpass HTTP/1.1" 401 Unauthorized

@@ -20,3 +20,25 @@ INFO:     Uvicorn running on http://127.0.0.1:8788 (Press CTRL+C to quit)
 2026-07-06 17:07:40,091 INFO httpx HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
 2026-07-06 17:08:42,258 INFO httpx HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
 2026-07-06 17:09:28,932 INFO httpx HTTP Request: POST https://api.anthropic.com/v1/messages "HTTP/1.1 200 OK"
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+2026-07-06 17:14:58,930 INFO apscheduler.scheduler Scheduler has been shut down
+INFO:     Application shutdown complete.
+INFO:     Finished server process [2948]
+INFO:     Started server process [8463]
+INFO:     Waiting for application startup.
+2026-07-06 17:14:59,393 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-06 17:14:59,393 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-06 17:14:59,393 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-06 17:14:59,393 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-06 17:14:59,393 INFO apscheduler.scheduler Adding job tentatively -- it will be properly scheduled when the scheduler starts
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Added job "ingest_news" to job store "default"
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Added job "refresh_quotes" to job store "default"
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Added job "ingest_slow" to job store "default"
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Added job "brief_morning" to job store "default"
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Added job "brief_evening" to job store "default"
+2026-07-06 17:14:59,394 INFO apscheduler.scheduler Scheduler started
+2026-07-06 17:14:59,394 INFO app.scheduler scheduler started (news=20m quotes=30m slow=60m)
+2026-07-06 17:14:59,394 INFO mosaic Mosaic 1.1.0 ready on http://127.0.0.1:8788
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://127.0.0.1:8788 (Press CTRL+C to quit)

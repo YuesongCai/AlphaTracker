@@ -12,6 +12,7 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config, scheduler, seeds
 from .api.routes import router
+from .auth import AccessTokenMiddleware, ensure_access_token
 from .db import init_db
 
 logging.basicConfig(
@@ -25,6 +26,7 @@ log = logging.getLogger("mosaic")
 async def lifespan(app: FastAPI):
     init_db()
     seeds.ensure_seeded()
+    ensure_access_token()
     if not os.environ.get("MOSAIC_NO_SCHED"):
         scheduler.start()
     log.info("Mosaic %s ready on http://%s:%s", config.VERSION, config.HOST, config.PORT)
@@ -33,6 +35,8 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Mosaic", version=config.VERSION, lifespan=lifespan)
+
+app.add_middleware(AccessTokenMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
