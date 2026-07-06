@@ -119,6 +119,33 @@ def add_ticker(body: TickerIn, db: Session = Depends(get_db)):
     return ser.ticker_out(ticker)
 
 
+class BulkTickersIn(BaseModel):
+    symbols: list[str]
+
+
+@router.post("/tickers/bulk")
+def add_tickers_bulk(body: BulkTickersIn, db: Session = Depends(get_db)):
+    """Paste a portfolio: symbols separated however — we normalize upstream."""
+    added, skipped = [], []
+    for raw in body.symbols[:60]:
+        symbol = raw.strip().upper().lstrip("$")
+        if not symbol or len(symbol) > 12:
+            continue
+        if db.query(Ticker).filter_by(symbol=symbol).first():
+            skipped.append(symbol)
+            continue
+        ticker = Ticker(symbol=symbol,
+                        market="HK" if symbol.endswith(".HK") else "US")
+        db.add(ticker)
+        db.commit()
+        try:
+            ingest.bootstrap_ticker(db, ticker)
+        except Exception as exc:  # noqa: BLE001
+            log.warning("bulk bootstrap failed for %s: %s", symbol, exc)
+        added.append(symbol)
+    return {"added": added, "skipped": skipped}
+
+
 @router.get("/tickers/{ticker_id}")
 def get_ticker(ticker_id: int, db: Session = Depends(get_db)):
     ticker = db.get(Ticker, ticker_id)
@@ -763,6 +790,7 @@ def manual_ingest(db: Session = Depends(get_db), what: str = "news"):
         else:
             result = ingest.ingest_news(db)
         narrative_service.refresh_all(db)
+        discovery.scan(db)
         brief_service.instant_alerts(db)
         return {"ok": True, "result": result}
     finally:

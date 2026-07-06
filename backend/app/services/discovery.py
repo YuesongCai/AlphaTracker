@@ -153,6 +153,7 @@ def scan(db: Session, llm_budget: int = MAX_LLM_PER_SCAN) -> dict:
 
     baseline = _baseline_counts(db, now, set(clusters))
     tracked = _tracked_keys(db)
+    coverage_symbols = {t.symbol for t in db.query(Ticker.symbol).all()}
 
     scored: list[tuple[str, list[Signal], dict]] = []
     for key, cluster_signals in clusters.items():
@@ -197,20 +198,25 @@ def scan(db: Session, llm_budget: int = MAX_LLM_PER_SCAN) -> dict:
             novelty=metrics["novelty"], evidence_ids=evidence_ids,
             title=f"{key}:热度升温", question="", engine="heuristic",
         )
+        synthesized = None
         if llm_used < llm_budget:
             synthesized = _synthesize(db, key, cluster_signals)
-            if synthesized is not None:
-                llm_used += 1
-                for field in ("title", "question", "why_now", "driver_question",
-                              "stance_bull", "stance_bear"):
-                    setattr(candidate, field, str(synthesized.get(field, ""))[:500])
-                candidate.ticker_symbols = [
-                    str(s).upper() for s in synthesized.get("ticker_symbols") or []][:6]
-                candidate.keywords = [str(k) for k in synthesized.get("keywords") or []][:4]
-                candidate.engine = synthesized.get("_engine", "llm")
-                candidate.ai_rationale = str(synthesized.get("rationale", ""))[:300]
-                if not synthesized.get("worth_tracking", True):
-                    candidate.status = "ai_skip"
+        if key in coverage_symbols and synthesized is None:
+            # A hot coverage name with no AI-framed debate adds nothing the
+            # trending strip doesn't already show — candidates must add framing.
+            continue
+        if synthesized is not None:
+            llm_used += 1
+            for field in ("title", "question", "why_now", "driver_question",
+                          "stance_bull", "stance_bear"):
+                setattr(candidate, field, str(synthesized.get(field, ""))[:500])
+            candidate.ticker_symbols = [
+                str(s).upper() for s in synthesized.get("ticker_symbols") or []][:6]
+            candidate.keywords = [str(k) for k in synthesized.get("keywords") or []][:4]
+            candidate.engine = synthesized.get("_engine", "llm")
+            candidate.ai_rationale = str(synthesized.get("rationale", ""))[:300]
+            if not synthesized.get("worth_tracking", True):
+                candidate.status = "ai_skip"
         db.add(candidate)
         new_count += 1
     db.commit()

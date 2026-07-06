@@ -3,6 +3,7 @@ import os
 import tempfile
 
 os.environ["MOSAIC_NO_SCHED"] = "1"
+os.environ["MOSAIC_DEMO"] = "1"  # these tests exercise the demo fixture set
 os.environ["MOSAIC_DATA_DIR"] = tempfile.mkdtemp(prefix="mosaic-test-")
 
 from fastapi.testclient import TestClient  # noqa: E402

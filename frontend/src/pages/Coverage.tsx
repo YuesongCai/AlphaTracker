@@ -7,8 +7,10 @@ import { Chg, Empty, Field, Modal, Spinner } from "../ui";
 export default function Coverage() {
   const [tickers, setTickers] = useState<Ticker[] | null>(null);
   const [showAdd, setShowAdd] = useState(false);
+  const [showBulk, setShowBulk] = useState(false);
   const [symbol, setSymbol] = useState("");
   const [name, setName] = useState("");
+  const [bulkText, setBulkText] = useState("");
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState("");
 
@@ -27,6 +29,21 @@ export default function Coverage() {
     } catch (e: any) { setError(e.message); } finally { setAdding(false); }
   };
 
+  const addBulk = async () => {
+    const symbols = bulkText.split(/[\s,;、，]+/).map((s) => s.trim()).filter(Boolean);
+    if (!symbols.length) return;
+    setAdding(true);
+    setError("");
+    try {
+      const r = await api.post<{ added: string[]; skipped: string[] }>(
+        "/api/tickers/bulk", { symbols });
+      setShowBulk(false);
+      setBulkText("");
+      if (r.skipped.length) setError(`已存在跳过:${r.skipped.join(" ")}`);
+      load();
+    } catch (e: any) { setError(e.message); } finally { setAdding(false); }
+  };
+
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -34,7 +51,10 @@ export default function Coverage() {
           <h1 className="text-[17px] font-semibold">覆盖池</h1>
           <p className="text-[12.5px] text-fg3 mt-0.5">know the companies you cover better than any non-insider</p>
         </div>
-        <button className="btn btn-primary btn-sm" onClick={() => setShowAdd(true)}>+ 添加标的</button>
+        <div className="flex gap-2">
+          <button className="btn btn-sm" onClick={() => setShowBulk(true)}>⇪ 批量导入</button>
+          <button className="btn btn-primary btn-sm" onClick={() => setShowAdd(true)}>+ 添加标的</button>
+        </div>
       </div>
 
       {tickers === null ? <Spinner /> : tickers.length === 0 ? <Empty>覆盖池为空</Empty> : (
@@ -78,6 +98,21 @@ export default function Coverage() {
           </table>
         </div>
       )}
+
+      <Modal open={showBulk} onClose={() => setShowBulk(false)} title="批量导入组合">
+        <Field label="粘贴代码列表(空格/逗号/换行分隔;美股 NVDA / 港股 0700.HK)">
+          <textarea className="input !h-[110px] num" value={bulkText} autoFocus
+                    placeholder={"GOOGL MSTR TSM UNH HOOD\nCRWV NBIS MU LITE COHR"}
+                    onChange={(e) => setBulkText(e.target.value)} />
+        </Field>
+        {error && <div className="text-[12px] text-down mb-2">{error}</div>}
+        <div className="flex justify-end gap-2 mt-3">
+          <button className="btn" onClick={() => setShowBulk(false)}>取消</button>
+          <button className="btn btn-primary" onClick={addBulk} disabled={adding}>
+            {adding ? <><span className="spinner" /> 逐个抓取初始数据…</> : "导入"}
+          </button>
+        </div>
+      </Modal>
 
       <Modal open={showAdd} onClose={() => setShowAdd(false)} title="添加标的">
         <Field label="代码 *(美股 NVDA / 港股 0700.HK)">

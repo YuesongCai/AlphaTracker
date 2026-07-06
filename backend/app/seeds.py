@@ -1,13 +1,17 @@
-"""First-boot seed data.
+"""First-boot seeding.
 
-Narratives come straight from the podcast's own examples (UBER×AV,
-SaaS×Agentic, DKNG×prediction markets...) so the demo tells the story.
-One full thesis (UBER) demonstrates drivers/signposts/kill-criteria/journal.
-Demo analysis content was AI-pre-generated at build time and is labeled so.
+DEFAULT: an empty workspace. The product's philosophy is discovery-first —
+narratives must be BORN from the engine (radar promote) or created by hand,
+never shipped in the box; coverage is the user's own book, not our guesses.
+
+Set MOSAIC_DEMO=1 before first boot to seed the podcast-example demo set
+(UBER×AV thesis, SaaS×Agentic, DKNG×prediction markets...) for show-and-tell
+installs. Demo analysis content was AI-pre-generated at build time, labeled so.
 """
 from __future__ import annotations
 
 import logging
+import os
 
 from .db import get_setting, session_scope, set_setting
 from .models import Driver, Idea, JournalEntry, Narrative, NarrativeTicker, Ticker
@@ -306,7 +310,11 @@ def ensure_seeded() -> None:
     with session_scope() as db:
         if get_setting(db, SEED_FLAG, False):
             return
-        log.info("seeding initial data ...")
+        if not os.environ.get("MOSAIC_DEMO"):
+            # empty workspace by default — see module docstring
+            set_setting(db, SEED_FLAG, True)
+            return
+        log.info("seeding demo data (MOSAIC_DEMO=1) ...")
 
         tickers: dict[str, Ticker] = {}
         for symbol, name, market, sector in TICKERS:
