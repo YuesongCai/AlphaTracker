@@ -17,6 +17,8 @@ cd AlphaTracker
 ```
 
 > 环境要求:macOS/Linux,Python 3.11+,Node 18+(仅首次构建前端需要)。
+> macOS 常驻部署:`./scripts/install-service.sh` 注册为 LaunchAgent(登录自启、崩溃自动拉起)。
+> 覆盖池支持「批量导入」直接粘贴组合代码;演示数据默认不装,`MOSAIC_DEMO=1 ./start.sh` 可选装。
 > 飞书推送可选,依赖本机 `lark-cli`(设置页可改路径或关闭);SEC EDGAR 抓取建议
 > `export MOSAIC_EDGAR_UA="YourTool your@email.com"` 表明身份。
 

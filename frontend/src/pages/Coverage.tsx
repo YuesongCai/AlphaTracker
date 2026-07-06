@@ -102,7 +102,7 @@ export default function Coverage() {
       <Modal open={showBulk} onClose={() => setShowBulk(false)} title="批量导入组合">
         <Field label="粘贴代码列表(空格/逗号/换行分隔;美股 NVDA / 港股 0700.HK)">
           <textarea className="input !h-[110px] num" value={bulkText} autoFocus
-                    placeholder={"GOOGL MSTR TSM UNH HOOD\nCRWV NBIS MU LITE COHR"}
+                    placeholder={"NVDA MSFT AAPL\n0700.HK 9988.HK"}
                     onChange={(e) => setBulkText(e.target.value)} />
         </Field>
         {error && <div className="text-[12px] text-down mb-2">{error}</div>}

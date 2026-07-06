@@ -188,6 +188,12 @@ def scan(db: Session, llm_budget: int = MAX_LLM_PER_SCAN) -> dict:
             existing.breadth_pub = metrics["breadth_pub"]
             existing.breadth_lane = metrics["breadth_lane"]
             existing.evidence_ids = evidence_ids
+            if existing.engine == "heuristic" and llm_used < llm_budget:
+                # heuristic-born candidate gets upgraded once AI is available
+                synthesized = _synthesize(db, key, cluster_signals)
+                if synthesized is not None:
+                    llm_used += 1
+                    _apply_synthesis(existing, synthesized)
             updated += 1
             continue
         if key in tracked:
@@ -207,21 +213,25 @@ def scan(db: Session, llm_budget: int = MAX_LLM_PER_SCAN) -> dict:
             continue
         if synthesized is not None:
             llm_used += 1
-            for field in ("title", "question", "why_now", "driver_question",
-                          "stance_bull", "stance_bear"):
-                setattr(candidate, field, str(synthesized.get(field, ""))[:500])
-            candidate.ticker_symbols = [
-                str(s).upper() for s in synthesized.get("ticker_symbols") or []][:6]
-            candidate.keywords = [str(k) for k in synthesized.get("keywords") or []][:4]
-            candidate.engine = synthesized.get("_engine", "llm")
-            candidate.ai_rationale = str(synthesized.get("rationale", ""))[:300]
-            if not synthesized.get("worth_tracking", True):
-                candidate.status = "ai_skip"
+            _apply_synthesis(candidate, synthesized)
         db.add(candidate)
         new_count += 1
     db.commit()
     return {"clusters": len(scored), "candidates_new": new_count,
             "candidates_updated": updated, "llm_used": llm_used}
+
+
+def _apply_synthesis(candidate: NarrativeCandidate, synthesized: dict) -> None:
+    for field in ("title", "question", "why_now", "driver_question",
+                  "stance_bull", "stance_bear"):
+        setattr(candidate, field, str(synthesized.get(field, ""))[:500])
+    candidate.ticker_symbols = [
+        str(s).upper() for s in synthesized.get("ticker_symbols") or []][:6]
+    candidate.keywords = [str(k) for k in synthesized.get("keywords") or []][:4]
+    candidate.engine = synthesized.get("_engine", "llm")
+    candidate.ai_rationale = str(synthesized.get("rationale", ""))[:300]
+    if not synthesized.get("worth_tracking", True):
+        candidate.status = "ai_skip"
 
 
 def _synthesize(db: Session, key: str, signals: list[Signal]) -> dict | None:
